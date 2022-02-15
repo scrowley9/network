@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.js": "javascriptreact",
+        "functional": "c",
+        "socket.h": "c",
+        "sstream": "c"
+    }
+}
