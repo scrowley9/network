@@ -90,7 +90,7 @@ static char* get_ip_from_host(char* host){
     // Translate hostname to IP
     struct addrinfo hints;
     struct addrinfo *res, *tmp; // Dynamically allocated in getaddrinfo
-    char ip_address[256];
+    char ip_address[20];
 
     memset(&hints, 0, sizeof(struct addrinfo));
     hints.ai_family = AF_INET;
@@ -106,7 +106,7 @@ static char* get_ip_from_host(char* host){
     getnameinfo(tmp->ai_addr, tmp->ai_addrlen, ip_address, sizeof(ip_address), NULL, 0, NI_NUMERICHOST);
 
     // Copy IP out of function
-    char* out_buff = calloc(256, sizeof(char));
+    char* out_buff = calloc(20, sizeof(char));
     if(!out_buff){
         fprintf(stderr, "Error - allocating for IP address\n");
         freeaddrinfo(res);

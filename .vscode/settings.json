@@ -3,6 +3,8 @@
         "*.js": "javascriptreact",
         "functional": "c",
         "socket.h": "c",
-        "sstream": "c"
+        "sstream": "c",
+        "types.h": "c",
+        "random": "c"
     }
 }

@@ -1,8 +1,9 @@
 GCC = gcc
 
-C_CLIENT  = client.c main.c
+C_CLIENT  = client.c main.c arp.c
+O_CLIENT  = client.o main.o arp.o
+
 C_SERVER = server.c
-O_CLIENT  = client.o main.o
 O_SERVER = server.o
 
 BUILD = build
