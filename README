@@ -1,5 +1,12 @@
 Basic Networking
 
+ARP TODO:
+ - create arp packet function
+ - align memory correctly
+ - create ethernet header
+ - pack packet buffer with appropriate headers
+ - determine how to broadcast the arp message on network
+
 TODO:
  - Parse HTTP packets
  - Setup Local Host Server (the ports are weird rn)
