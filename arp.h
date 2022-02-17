@@ -1,6 +1,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <inttypes.h> // For print formatting
+#include <arpa/inet.h>
 
 #define ETH_P_ARP 0x0806 /* Address Resolution packet */
 #define ARP_HTYPE_ETHER 1  /* Ethernet ARP type */
@@ -36,10 +38,14 @@ typedef struct {
    uint16_t frame_type;   /* Ethernet frame type */
 } ether_hdr;
 
-arp_ether_ipv4* create_arp_message(uint16_t htype, uint16_t ptype, uint8_t hlen, uint8_t plen, uint16_t op, uint8_t sha[MAC_ADDRESS_LEN], uint32_t spa, uint8_t tha[MAC_ADDRESS_LEN], uint32_t tpa);
+uint8_t* create_arp_request(arp_ether_ipv4* arp);
+
+arp_ether_ipv4* init_arp_struct(uint16_t htype, uint16_t ptype, uint8_t hlen, uint8_t plen, uint16_t op, uint8_t sha[MAC_ADDRESS_LEN], uint32_t spa, uint8_t tha[MAC_ADDRESS_LEN], uint32_t tpa);
 uint8_t* convert_MAC_addr_to_bytes(char* mac_addr);
 uint32_t convert_IP_addr_to_bytes(char* ip_addr);
 char* uint32_to_ip_string(uint32_t ip_bytes);
-void print_arp_packet_bytes(arp_ether_ipv4* packet);
-void print_arp_packet(arp_ether_ipv4* packet);
+
+void print_arp_packet(uint8_t* packet);
+void print_arp_struct_bytes(arp_ether_ipv4* packet);
+void print_arp_struct(arp_ether_ipv4* packet);
 void packageARP(unsigned char *buffer, ether_hdr *frameHeader, arp_ether_ipv4 *arp_packet, size_t *bufferSize);

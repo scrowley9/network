@@ -1,7 +1,7 @@
 GCC = gcc
 
-C_CLIENT  = client.c main.c arp.c
-O_CLIENT  = client.o main.o arp.o
+C_CLIENT  = client.c main.c arp.c udp.c
+O_CLIENT  = client.o main.o arp.o udp.o
 
 C_SERVER = server.c
 O_SERVER = server.o

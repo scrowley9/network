@@ -33,7 +33,7 @@ int tcp_connection_loop(char* host){
 
     if((fd = socket(domain, data_type, protocol)) < 0){
         // Failed!
-        fprintf(stderr, "Error - Unable to create socket!\n");
+        fprintf(stderr, "Error - Unable to create TCP socket!\n");
         return ERROR;
     }
 
