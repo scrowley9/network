@@ -1,10 +1,10 @@
 Basic Networking
 
 ARP TODO:
- - create arp packet function
- - align memory correctly
+ - create arp packet function (DONE)
+ - align memory correctly (DONE)
  - create ethernet header
- - pack packet buffer with appropriate headers
+ - convert host to network byte order when you create the packet buffer to send
  - determine how to broadcast the arp message on network
 
 TODO:
