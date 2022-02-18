@@ -8,7 +8,7 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-#define ERROR 1
+#define ERROR -1
 #define LOCAL_PORT 6800
 #define HTTP_PORT 80
 

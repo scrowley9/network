@@ -7,7 +7,7 @@
 // char* google = "google.com";
 
 char* unknown_mac = "00:00:00:00:00:00";
-char* known_ip = "192.168.1.1";
+char* desination_ip = "192.168.1.255";
 
 char* host_mac = "f8:ff:c2:41:53:71";
 char* host_ip = "192.168.1.17";
@@ -26,7 +26,7 @@ int main(int argc, char const *argv[]){
                                             host,
                                             convert_IP_addr_to_bytes(host_ip),
                                             dest,
-                                            convert_IP_addr_to_bytes(known_ip));
+                                            convert_IP_addr_to_bytes(desination_ip));
 
     printf("HIT!1\n");
     uint8_t* msg = create_arp_request(arp);
@@ -34,20 +34,31 @@ int main(int argc, char const *argv[]){
 
     print_arp_packet_bytes(msg);
 
-    printf("3\n");
-    sleep(1);
-    printf("2\n");
-    sleep(1);
-    printf("1\n");
-    sleep(1);
-    printf("Sending Msg\n");
+    // for(int i = 0; i < 800; i++){
+        // sleep(1);
+        struct sockaddr_in endpoint;
+        int broadcast = create_broadcast_socket(17, desination_ip, &endpoint); // create udp socket and set endpoint ip
+        udp_send_message(msg, sizeof(arp_ether_ipv4)+sizeof(ether_hdr), broadcast, &endpoint); // broadcast
+        close(broadcast);
 
-    udp_send_message(msg, sizeof(arp_ether_ipv4), "255.255.255.255"); // broadcast
-    for(int i = 0; i < 10; i++){
-        sleep(1);
-        printf("Retransmitting\n");
-        udp_send_message(msg, sizeof(arp_ether_ipv4), "255.255.255.255"); // broadcast
-    }
+        broadcast = create_broadcast_socket(27, desination_ip, &endpoint); // create udp socket and set endpoint ip
+        udp_send_message(msg, sizeof(arp_ether_ipv4)+sizeof(ether_hdr), broadcast, &endpoint); // broadcast
+        close(broadcast);
+
+        broadcast = create_broadcast_socket(30, desination_ip, &endpoint); // create udp socket and set endpoint ip
+        udp_send_message(msg, sizeof(arp_ether_ipv4)+sizeof(ether_hdr), broadcast, &endpoint); // broadcast
+        close(broadcast);
+        
+        // 17, 27, 30
+        // AF_ROUTE - 17 ()
+        // AF_NDRV - 27 "raw" access to network driver
+        // AF_INET6 - 30 (IPv6)
+    // }
+    // for(int i = 0; i < 10; i++){
+    //     sleep(1);
+    //     printf("Retransmitting\n");
+    //     udp_send_message(msg, sizeof(arp_ether_ipv4)+sizeof(ether_hdr), broadcast, &endpoint); // broadcast
+    // }
 
     free(arp);
     free(host);

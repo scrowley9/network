@@ -5,6 +5,8 @@
         "socket.h": "c",
         "sstream": "c",
         "types.h": "c",
-        "random": "c"
+        "random": "c",
+        "arp.h": "c",
+        "pcap.h": "c"
     }
 }

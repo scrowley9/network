@@ -8,7 +8,11 @@
 #include <sys/socket.h>
 #include <netdb.h>
 
-#define ERROR 1
-#define UDP_PORT 6000 // Binding for UDP messages
+#define ERROR -1
+#define DST_UDP_PORT 6000 // UDP Server Port
+#define MAXLINE 1024
 
-void udp_send_message(uint8_t* buff, size_t size, char* ip);
+int create_broadcast_socket(int i, char* ip, struct sockaddr_in* endpoint);
+void udp_send_message(char* buff, size_t size, int udp_socket, struct sockaddr* endpoint);
+void udp_cleanup(int udp_socket);
+// void udp_recv_message(int udp_socket, struct sockaddr* endpoint);
