@@ -1,11 +1,13 @@
 Basic Networking
 
 ARP TODO:
+ - Now ARP requests can be sent, consider removing things to see what happens (remove the interface name->index conversion)
  - create arp packet function (DONE)
  - align memory correctly (DONE)
  - create ethernet header
  - convert host to network byte order when you create the packet buffer to send
  - determine how to broadcast the arp message on network
+ - REWRITE EVERYTHING TO SEND ARP MESSAGES MORE CLEANLY
 
 TODO:
  - Parse HTTP packets
