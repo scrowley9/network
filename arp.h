@@ -3,6 +3,7 @@
 #include <string.h>
 #include <inttypes.h> // For print formatting
 #include <arpa/inet.h>
+#include <netinet/ip.h>
 
 #define ETH_P_ARP 0x0806 /* Address Resolution packet */
 #define ARP_HTYPE_ETHER 1  /* Ethernet ARP type */
@@ -45,7 +46,7 @@ uint8_t* convert_MAC_addr_to_bytes(char* mac_addr);
 uint32_t convert_IP_addr_to_bytes(char* ip_addr);
 char* uint32_to_ip_string(uint32_t ip_bytes);
 
-void print_arp_packet(uint8_t* packet);
+void print_arp_packet_bytes(uint8_t* packet);
 void print_arp_struct_bytes(arp_ether_ipv4* packet);
 void print_arp_struct(arp_ether_ipv4* packet);
 void packageARP(unsigned char *buffer, ether_hdr *frameHeader, arp_ether_ipv4 *arp_packet, size_t *bufferSize);

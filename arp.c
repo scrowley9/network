@@ -6,21 +6,16 @@ uint8_t* create_arp_request(arp_ether_ipv4* arp){
     uint8_t broad[6] = {-1,-1,-1,-1,-1,-1};
     memcpy(eth0.dest_addr, broad, 6); // destination broadcast
     memcpy(eth0.src_addr, arp->sha, 6); // src
-    eth0.frame_type = htons(0x0806); // Specifies ARP message
+    eth0.frame_type = htons(ETH_P_ARP); // Specifies ARP message
 
-    // Create Ethernet Buffer
+    // Create Buffer
     uint8_t* buff = calloc(1, sizeof(ether_hdr)+sizeof(arp_ether_ipv4));
     if(!buff){
         fprintf(stderr, "Error - Failed to allocate for arp request buffer\n");
     }
 
+    // Create Packet
     memcpy(buff, &eth0, sizeof(ether_hdr)); // Copy ethernet header into buffer
-
-    // change to network byte order
-    arp->htype = ntohs(arp->htype);
-    arp->ptype = ntohs(arp->ptype);
-    arp->op = ntohs(1);
-    
     memcpy(buff+sizeof(ether_hdr), arp, sizeof(arp_ether_ipv4)); // Copy arp header into buffer
 
     return (uint8_t*)buff;
@@ -33,15 +28,23 @@ arp_ether_ipv4* init_arp_struct(uint16_t htype, uint16_t ptype, uint8_t hlen, ui
         return NULL;
     }
 
-    msg->htype = htype; // ntohs
-    msg->ptype = ptype; // ntohs
+    msg->htype = htons(htype); // htons
+    msg->ptype = htons(ptype); // htons
     msg->hlen = hlen;
     msg->plen = plen;
-    msg->op = op; // ntohs
+    msg->op = htons(op); // htons
     memcpy(msg->sha, sha, MAC_ADDRESS_LEN);
-    msg->spa = spa;
     memcpy(msg->tha, tha, MAC_ADDRESS_LEN);
+    msg->spa = spa;
     msg->tpa = tpa;
+//    if(!inet_pton(AF_INET, spa, msg->spa)){
+//        free(msg);
+//        return NULL;
+//    }
+//    if(!inet_pton(AF_INET, tpa, msg->tpa = tpa)){
+//        free(msg);
+//        return NULL;
+//    }
 
     return msg;
 }
@@ -58,7 +61,7 @@ uint8_t* convert_MAC_addr_to_bytes(char* mac_addr){
     int num_bytes = 6;
     for(int i = 0; i < num_bytes; i++){
         uint8_t byte = 0;
-        sscanf(mac_addr, "%x", &mac_byte_addr[i]); // read two chars and save as byte
+        sscanf(mac_addr, "%hhx", &mac_byte_addr[i]); // read two chars and save as byte
 
         // move temp ptr to next byte
         if((mac_addr = strchr(mac_addr, (int)':')) == NULL) break; // just in case
@@ -71,7 +74,7 @@ uint8_t* convert_MAC_addr_to_bytes(char* mac_addr){
 uint32_t convert_IP_addr_to_bytes(char* ip_addr){
     uint32_t ip = 0;
     struct sockaddr_in my_addr;
-    my_addr.sin_family = AF_INET; // unnecessary
+    my_addr.sin_family = AF_PACKET; // unnecessary
     my_addr.sin_port = htons(80); // unnecessary
 
     inet_aton(ip_addr, &(my_addr.sin_addr)); // inet_aton > inet_addr("ip")

@@ -7,6 +7,11 @@
         "types.h": "c",
         "random": "c",
         "arp.h": "c",
-        "pcap.h": "c"
+        "pcap.h": "c",
+        "udp.h": "c",
+        "stdlib.h": "c",
+        "stdio.h": "c",
+        "if_packet.h": "c",
+        "if.h": "c"
     }
 }
