@@ -31,7 +31,6 @@ void usage(const char prog_name[const])
   fprintf(stderr, ERROR_DISPLAY_USAGE, prog_name);
 }
 
-
 // char* google = "google.com";
 
 char* unknown_mac = "ff:ff:ff:ff:ff:ff";
