@@ -33,6 +33,7 @@ void usage(const char prog_name[const])
 
 // char* google = "google.com";
 
+
 char* unknown_mac = "ff:ff:ff:ff:ff:ff";
 char* desination_ip = "192.168.1.1"; // Router IP
 
