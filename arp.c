@@ -1,14 +1,99 @@
 #include "arp.h"
+#include "misc.h"
 
-uint8_t* create_arp_request(arp_ether_ipv4* arp){
+uint8_t* create_arp_request(char* src_mac, char* dst_mac, char* src_ip, char* dst_ip);
+arp_ether_ipv4* init_arp_struct(uint16_t htype, uint16_t ptype, uint8_t hlen, uint8_t plen, uint16_t op, uint8_t sha[MAC_ADDRESS_LEN], uint32_t spa, uint8_t tha[MAC_ADDRESS_LEN], uint32_t tpa);
+uint8_t* convert_MAC_addr_to_bytes(char* mac_addr);
+uint32_t convert_IP_addr_to_bytes(char* ip_addr);
+char* uint32_to_ip_string(uint32_t ip_bytes);
 
+void print_arp_packet_bytes(uint8_t* packet);
+void print_arp_struct_bytes(arp_ether_ipv4* packet);
+void print_arp_struct(arp_ether_ipv4* packet);
+
+/**
+ * @brief Create a broadcast socket fd
+ * REQUIRES: user to be root
+ * 
+ * @param ip 
+ * @param endpoint 
+ * @return int 
+ */
+int send_request(char* src_mac, char* dst_mac, char* src_ip, char* dst_ip, char* interface){
+
+    // Create ARP Request Packet
+    uint8_t* msg = create_arp_request(src_mac, dst_mac, src_ip, dst_ip);
+
+    // Create Socket
+    int domain = AF_PACKET; // AF_PACKET replacement (Linux only) -- send packet as is without transport protocol (i.e. no TCP header)
+    int data_type = SOCK_RAW; // UDP socket -- don't use DGRAM because we want to fill in the ethernet header
+    int protocol = htons(ETH_P_ARP); // ARP protocol
+    int fd = -2;
+
+    if((fd = socket(domain, data_type, protocol)) < 0){
+        // MUST BE ROOT to create raw
+        perror("Unable to create RAW socket (make sure to execute as admin)");
+        free(msg);
+        return ERROR;
+    }
+
+    // Find & Select Network Interface
+    struct sockaddr_ll endpoint;
+    memset(&endpoint, 0, sizeof(struct sockaddr_ll)); // clear out endpoint address
+    
+    if((endpoint.sll_ifindex = if_nametoindex(interface)) == 0){
+        perror("Error converting interface name to index");
+        close(fd);
+        free(msg);
+        return ERROR;
+    }
+
+    // Send ARP request
+    ssize_t err = 0;
+    if((err = sendto(fd, msg, sizeof(arp_ether_ipv4)+sizeof(ether_hdr), 0, (struct sockaddr*)&endpoint, sizeof(struct sockaddr_ll))) < 0){
+        perror("Unable to send RAW packet");
+        free(msg);
+        close(fd);
+        return ERROR;
+    }
+
+    printf("ARP Request Sent\n");
+    free(msg);
+
+    return fd;
+}
+
+/**
+ * @brief Create buffer with Ethernet and ARP header
+ * 
+ * @param src_mac 
+ * @return uint8_t* 
+ */
+uint8_t* create_arp_request(char* src_mac, char* dst_mac, char* src_ip, char* dst_ip){
+
+    uint8_t* host = convert_MAC_addr_to_bytes(src_mac); // Get host mac address differently
+    uint8_t* dest = convert_MAC_addr_to_bytes(dst_mac);
+
+    // Create ARP header
+    arp_ether_ipv4* arp = init_arp_struct(
+                                        ARP_HTYPE_ETHER,
+                                        ARP_PTYPE_IPv4,
+                                        MAC_ADDRESS_LEN,
+                                        IPv4_ADDRESS_LEN,
+                                        1,
+                                        host,
+                                        convert_IP_addr_to_bytes(src_ip),
+                                        dest,
+                                        convert_IP_addr_to_bytes(dst_ip));
+
+    // Create Ethernet Header
     ether_hdr eth0;
     uint8_t broad[6] = {-1,-1,-1,-1,-1,-1};
     memcpy(eth0.dest_addr, broad, 6); // destination broadcast
     memcpy(eth0.src_addr, arp->sha, 6); // src
     eth0.frame_type = htons(ETH_P_ARP); // Specifies ARP message
 
-    // Create Buffer
+    // Create Packet Buffer
     uint8_t* buff = calloc(1, sizeof(ether_hdr)+sizeof(arp_ether_ipv4));
     if(!buff){
         fprintf(stderr, "Error - Failed to allocate for arp request buffer\n");
@@ -17,6 +102,13 @@ uint8_t* create_arp_request(arp_ether_ipv4* arp){
     // Create Packet
     memcpy(buff, &eth0, sizeof(ether_hdr)); // Copy ethernet header into buffer
     memcpy(buff+sizeof(ether_hdr), arp, sizeof(arp_ether_ipv4)); // Copy arp header into buffer
+
+    // Cleanups
+    free(arp);
+    free(host);
+    free(dest);
+
+    // print_arp_packet_bytes(buff);
 
     return (uint8_t*)buff;
 }
@@ -37,81 +129,8 @@ arp_ether_ipv4* init_arp_struct(uint16_t htype, uint16_t ptype, uint8_t hlen, ui
     memcpy(msg->tha, tha, MAC_ADDRESS_LEN);
     msg->spa = spa;
     msg->tpa = tpa;
-//    if(!inet_pton(AF_INET, spa, msg->spa)){
-//        free(msg);
-//        return NULL;
-//    }
-//    if(!inet_pton(AF_INET, tpa, msg->tpa = tpa)){
-//        free(msg);
-//        return NULL;
-//    }
 
     return msg;
-}
-
-uint8_t* convert_MAC_addr_to_bytes(char* mac_addr){
-    
-    uint8_t* mac_byte_addr = calloc(6, sizeof(uint8_t));
-    if(!mac_byte_addr){
-        fprintf(stderr, "Error - allocating for MAC address\n");
-        return NULL;
-    }
-
-    // MAC String to Bytes
-    int num_bytes = 6;
-    for(int i = 0; i < num_bytes; i++){
-        uint8_t byte = 0;
-        sscanf(mac_addr, "%hhx", &mac_byte_addr[i]); // read two chars and save as byte
-
-        // move temp ptr to next byte
-        if((mac_addr = strchr(mac_addr, (int)':')) == NULL) break; // just in case
-        mac_addr+=1;
-    }
-
-    return mac_byte_addr;
-}
-
-uint32_t convert_IP_addr_to_bytes(char* ip_addr){
-    uint32_t ip = 0;
-    struct sockaddr_in my_addr;
-    my_addr.sin_family = AF_PACKET; // unnecessary
-    my_addr.sin_port = htons(80); // unnecessary
-
-    inet_aton(ip_addr, &(my_addr.sin_addr)); // inet_aton > inet_addr("ip")
-
-    return (uint32_t)my_addr.sin_addr.s_addr; // return uint32_t
-
-    // uint32_t ip_bytes = 0;
-    // int num_bytes = 4;
-    // for(int i = 0; i < num_bytes; i++){
-    //     uint8_t byte = 0;
-    //     sscanf(ip_addr, "%d", &byte); // read two chars and save as byte
-    //     ip_bytes = (ip_bytes << 8) | byte;
-
-    //     // move temp ptr to next byte
-    //     if((ip_addr = strchr(ip_addr, (int)'.')) == NULL) break; // just in case
-    //     ip_addr+=1;
-    // }
-    // return ip_bytes;
-}
-
-/* Remember to free returned data */
-char* uint32_to_ip_string(uint32_t ip_bytes){
-
-    struct in_addr ip;
-    ip.s_addr = ip_bytes;
-    char* data = inet_ntoa(ip); // returns a pointer to a static buffer that is overwritten each time its called
-    size_t len = strlen(data);
-    char* ret = calloc(len+1, sizeof(char));
-    if(!ret){
-        fprintf(stderr, "Failed to allocate IP address buffer\n");
-        return NULL;
-    }
-
-    // Save IP Address Buffer
-    memcpy(ret, data, len);
-    
-    return ret;
 }
 
 // Once ethernet
@@ -167,55 +186,73 @@ void print_arp_struct(arp_ether_ipv4* packet){
     free(data);
 }
 
-void packageARP(unsigned char *buffer, ether_hdr *frameHeader, arp_ether_ipv4 *arp_packet, size_t *bufferSize) {
-  unsigned char *cp;
-  size_t packet_size = sizeof(frameHeader) + sizeof(arp_ether_ipv4);
 
-  cp = buffer;
-  
-  /*
-   *  Copy the Ethernet frame header to the buffer.
-   */
-  memcpy(cp, &(frameHeader->dest_addr), sizeof(frameHeader->dest_addr));
-  cp += sizeof(frameHeader->dest_addr);
+// Extra stuff I found online -- not my macros
+# define NEWLINE			"\n"
+# define ADD_NEWLINE(STRING)		STRING NEWLINE
+# define ERROR_SOCKET_CREATION		ADD_NEWLINE("[-] ERROR: Socket creation failed")
+# define ERROR_GET_MAC			ADD_NEWLINE("[-] ERROR: Could not get MAC address")
+# define ERROR_PACKET_CREATION_ARP	ADD_NEWLINE("[-] ERROR: ARP packet creation failed")
+# define ERROR_PACKET_CREATION_ETHER	ADD_NEWLINE("[-] ERROR: Ether frame creation failed")
+# define ERROR_COULD_NOT_SEND		ADD_NEWLINE("[-] ERROR: Could not send")
+# define ERROR_COULD_NOT_RECEIVE	ADD_NEWLINE("[-] ERROR: Could not receive")
 
-  memcpy(cp, &(frameHeader->src_addr), sizeof(frameHeader->src_addr));
-  cp += sizeof(frameHeader->src_addr);
+# define PRINT_MAC_ADDRESS(X)   fprintf(stdout, "%02X:%02X:%02X:%02X:%02X:%02X\n", \
+					X[0],				\
+					X[1],				\
+					X[2],				\
+					X[3],				\
+					X[4],				\
+					X[5]);
 
-  /* Normal Ethernet-II framing */
-  memcpy(cp, &(frameHeader->frame_type), sizeof(frameHeader->frame_type));
-  cp += sizeof(frameHeader->frame_type);
+uint8_t	*recv_reply(const int sd, const char *victim_ip)
+{
+    char				buffer[IP_MAXPACKET];
+    ether_hdr		*ethernet_packet;
+    arp_ether_ipv4			*arp_packet;
+    uint8_t			*victim_mac_address;
+    char				uint8_t_to_str[INET_ADDRSTRLEN] = {0};
 
+    if (!(victim_mac_address = malloc(sizeof(uint8_t) * 6)))
+        return (NULL);
+    fprintf(stdout, "[*] Listening for target response..\n");
 
-  /*
-   *  Add the ARP data.
-   */
-  memcpy(cp, &(arp_packet->htype), sizeof(arp_packet->htype));
-  cp += sizeof(arp_packet->htype);
+    while (1)
+    {
+        if (recvfrom(sd, buffer, IP_MAXPACKET, 0, NULL, NULL) < 0){
+            perror("Unable to receive a packet");
+            return (NULL);
+        }
+        ethernet_packet = (ether_hdr *)buffer;
+        if (ntohs(ethernet_packet->frame_type) != ETH_P_ARP)
+            continue ;
 
-  memcpy(cp, &(arp_packet->ptype), sizeof(arp_packet->ptype));
-  cp += sizeof(arp_packet->ptype);
+        arp_packet = (arp_ether_ipv4 *)(buffer + sizeof(ether_hdr));
 
-  memcpy(cp, &(arp_packet->hlen), sizeof(arp_packet->hlen));
-  cp += sizeof(arp_packet->hlen);
+        if (ntohs(arp_packet->op) != ARPOP_REPLY
+            || (arp_packet->spa && !inet_ntop(AF_INET, &arp_packet->spa, uint8_t_to_str, INET_ADDRSTRLEN))
+            || strcmp(uint8_t_to_str, victim_ip)){
+            memset(uint8_t_to_str, 0, INET_ADDRSTRLEN);
+            continue ;
+        }
+        fprintf(stdout, "[+] Got response from victim\n");
+        fprintf(stdout, "[*] Sender mac address: ");
+        PRINT_MAC_ADDRESS(arp_packet->sha);
 
-  memcpy(cp, &(arp_packet->plen), sizeof(arp_packet->plen));
-  cp += sizeof(arp_packet->plen);
+        char* data = uint32_to_ip_string(arp_packet->spa);
+        printf("[*] Sender IP address: %s\n", data);
+        free(data);
 
-  memcpy(cp, &(arp_packet->op), sizeof(arp_packet->op));
-  cp += sizeof(arp_packet->op);
+        fprintf(stdout, "[*] Target mac address: ");
+        PRINT_MAC_ADDRESS(arp_packet->tha);
 
-  memcpy(cp, &(arp_packet->sha), sizeof(arp_packet->sha));
-  cp += sizeof(arp_packet->sha);
+        data = uint32_to_ip_string(arp_packet->tpa);
+        printf("[*] Receiver IP address: %s\n\n", data);
+        free(data);
 
-  memcpy(cp, &(arp_packet->spa), sizeof(arp_packet->spa));
-  cp += sizeof(arp_packet->spa);
-
-  memcpy(cp, &(arp_packet->tha), sizeof(arp_packet->tha));
-  cp += sizeof(arp_packet->tha);
-
-  memcpy(cp, &(arp_packet->tpa), sizeof(arp_packet->tpa));
-  cp += sizeof(arp_packet->tpa);
-
-  *bufferSize = packet_size;
+        memcpy(victim_mac_address, arp_packet->sha, 6 * sizeof(uint8_t));
+        fprintf(stdout, "[*] Victim's mac address: ");
+        PRINT_MAC_ADDRESS(victim_mac_address);
+        return (victim_mac_address);
+    }
 }

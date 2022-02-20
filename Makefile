@@ -1,30 +1,20 @@
 GCC = gcc
-
-C_CLIENT  = client.c main.c arp.c udp.c
-O_CLIENT  = client.o main.o arp.o udp.o
-
-C_SERVER = server.c
-O_SERVER = server.o
-
+C_ARP  = main.c arp.c misc.c
+O_ARP  = main.o arp.o misc.o
 BUILD = build
-CLIENT = client
-SERVER = server
-
+ARP = spoof
 FLAGS = 
 
 .PHONY: build obj clean
 
 build: obj clean
-	@ cd $(BUILD) && $(GCC) $(FLAGS) $(O_CLIENT) -o $(CLIENT)
-	@ cd $(BUILD) && $(GCC) $(FLAGS) $(O_SERVER) -o $(SERVER)
-	@ cd $(BUILD) && mv $(CLIENT) ../ && mv $(SERVER) ../
+	@ cd $(BUILD) && $(GCC) $(FLAGS) $(O_ARP) -o $(ARP)
+	@ cd $(BUILD) && mv $(ARP) ../
 
 obj: clean
 	@ mkdir $(BUILD)
-	@ $(GCC) $(C_CLIENT) -c
-	@ $(GCC) $(C_SERVER) -c
-	@ mv $(O_CLIENT) $(BUILD)
-	@ mv $(O_SERVER) $(BUILD)
+	@ $(GCC) $(C_ARP) -c
+	@ mv $(O_ARP) $(BUILD)
 
 clean:
-	@ rm -rf $(CLIENT) $(SERVER) $(BUILD)
+	@ rm -rf $(ARP) $(BUILD)

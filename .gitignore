@@ -2,3 +2,4 @@ server
 client
 *.o
 build/
+spoof
